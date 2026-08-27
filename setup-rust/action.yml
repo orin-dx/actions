@@ -1,0 +1,52 @@
+name: 'Setup Rust toolchain & cache'
+description: >-
+  rustup toolchain install + Swatinem/rust-cache, the pair nearly every Rust
+  CI job needs. Uses rustup directly rather than dtolnay/rust-toolchain so
+  the toolchain channel/version can be a plain input -- dtolnay/rust-toolchain
+  selects its channel via the action's own git ref (@stable, @1.96.0), which
+  can't be parameterized from inside a composite action.
+inputs:
+  toolchain:
+    description: 'Toolchain channel/version (stable, nightly, or a pinned version like 1.96.0)'
+    required: false
+    default: 'stable'
+  components:
+    description: 'Comma-separated rustup components, e.g. "clippy,rustfmt"'
+    required: false
+    default: ''
+  targets:
+    description: 'Comma-separated compile targets, e.g. "wasm32-wasip1"'
+    required: false
+    default: ''
+  cache-key:
+    description: 'Extra Swatinem/rust-cache key segment (e.g. a matrix target) -- set this whenever the job is part of a matrix, so legs sharing an OS do not thrash each other''s cache'
+    required: false
+    default: ''
+  shared-key:
+    description: 'Swatinem/rust-cache shared-key, for jobs that intentionally want to share one cache entry'
+    required: false
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        rustup toolchain install "${{ inputs.toolchain }}" --profile minimal --no-self-update
+        rustup default "${{ inputs.toolchain }}"
+        if [ -n "${{ inputs.components }}" ]; then
+          IFS=',' read -ra COMPONENTS <<< "${{ inputs.components }}"
+          for c in "${COMPONENTS[@]}"; do
+            rustup component add "$(echo "$c" | xargs)"
+          done
+        fi
+        if [ -n "${{ inputs.targets }}" ]; then
+          IFS=',' read -ra TARGETS <<< "${{ inputs.targets }}"
+          for t in "${TARGETS[@]}"; do
+            rustup target add "$(echo "$t" | xargs)"
+          done
+        fi
+    - uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ inputs.cache-key }}
+        shared-key: ${{ inputs.shared-key }}
