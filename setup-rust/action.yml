@@ -26,6 +26,10 @@ inputs:
     description: 'Swatinem/rust-cache shared-key, for jobs that intentionally want to share one cache entry'
     required: false
     default: ''
+  save-if:
+    description: 'Swatinem/rust-cache save-if -- pass "true" to always save, overriding its default-branch-only save behavior'
+    required: false
+    default: ''
 runs:
   using: 'composite'
   steps:
@@ -50,3 +54,4 @@ runs:
       with:
         key: ${{ inputs.cache-key }}
         shared-key: ${{ inputs.shared-key }}
+        save-if: ${{ inputs.save-if }}
