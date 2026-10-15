@@ -1,4 +1,9 @@
-# actions
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/hero-dark.png">
+    <img src="assets/brand/hero-light.png" alt="actions, shared GitHub actions for Orin DX" width="360">
+  </picture>
+</p>
 
 Shared, reusable GitHub composite actions for orin-dx/orin-axi repos. Extracted from duplicated CI blocks across michi, lumen, oxc-react-docgen, and callisto.
 
