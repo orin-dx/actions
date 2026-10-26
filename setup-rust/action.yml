@@ -50,7 +50,7 @@ runs:
             rustup target add "$(echo "$t" | xargs)"
           done
         fi
-    - uses: Swatinem/rust-cache@v2
+    - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
       with:
         key: ${{ inputs.cache-key }}
         shared-key: ${{ inputs.shared-key }}

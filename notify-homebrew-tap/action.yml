@@ -1,0 +1,65 @@
+name: Notify Homebrew tap
+description: Send a versioned release event to an Orin DX Homebrew tap with a tap-scoped GitHub App token.
+
+inputs:
+  client-id:
+    description: GitHub App client ID. The App must be installed on the target tap.
+    required: true
+  private-key:
+    description: GitHub App private key, passed from an Actions secret.
+    required: true
+  tap-repository:
+    description: GitHub owner/repository of the tap.
+    required: true
+  tool:
+    description: Tool name configured in the tap, such as callisto or caliper.
+    required: true
+  release-tag:
+    description: Published upstream release tag.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Validate dispatch target
+      id: target
+      shell: bash
+      env:
+        TAP_REPOSITORY: ${{ inputs.tap-repository }}
+        TOOL: ${{ inputs.tool }}
+        RELEASE_TAG: ${{ inputs.release-tag }}
+      run: |
+        set -euo pipefail
+        if [[ ! "$TAP_REPOSITORY" =~ ^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$ ]]; then
+          echo 'Expected tap-repository as owner/repository' >&2
+          exit 1
+        fi
+        if [[ ! "$TOOL" =~ ^[a-z][a-z0-9-]{0,63}$ ]]; then
+          echo 'Invalid tap tool name' >&2
+          exit 1
+        fi
+        if [[ ! "$RELEASE_TAG" =~ ^[A-Za-z0-9][A-Za-z0-9._@+/-]{0,127}$ ]]; then
+          echo 'Invalid release tag' >&2
+          exit 1
+        fi
+        echo "owner=${TAP_REPOSITORY%%/*}" >> "$GITHUB_OUTPUT"
+        echo "repository=${TAP_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
+    - name: Create tap-scoped token
+      id: app-token
+      uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+      with:
+        client-id: ${{ inputs.client-id }}
+        private-key: ${{ inputs.private-key }}
+        owner: ${{ steps.target.outputs.owner }}
+        repositories: ${{ steps.target.outputs.repository }}
+        permission-contents: write
+    - name: Dispatch release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        TAP_REPOSITORY: ${{ inputs.tap-repository }}
+        TOOL: ${{ inputs.tool }}
+        RELEASE_TAG: ${{ inputs.release-tag }}
+      run: |
+        set -euo pipefail
+        gh api "repos/${TAP_REPOSITORY}/dispatches" -f event_type=tool_released -f "client_payload[tool]=${TOOL}" -f "client_payload[tag]=${RELEASE_TAG}"
